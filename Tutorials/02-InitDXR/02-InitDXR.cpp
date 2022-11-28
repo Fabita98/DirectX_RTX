@@ -37,14 +37,19 @@ IDXGISwapChain3Ptr createDxgiSwapChain(IDXGIFactory4Ptr pFactory, HWND hwnd, uin
     swapChainDesc.Width = width;
     swapChainDesc.Height = height;
     swapChainDesc.Format = format;
+    // Use the surface or resource as an output render target
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+    // The number of multisamples per pixel
     swapChainDesc.SampleDesc.Count = 1;
 
-    // CreateSwapChainForHwnd() doesn't accept IDXGISwapChain3 (Why MS? Why?)
+    // CreateSwapChainForHwnd() doesn't accept IDXGISwapChain3
     MAKE_SMART_COM_PTR(IDXGISwapChain1);
     IDXGISwapChain1Ptr pSwapChain;
-
+    // HRESULT: 32-bit value, divided into three different fields: a severity code, 
+    // a facility code
+    // and an error code
+    // method to create a swap chain, the runtime obtains the width from the output window assigns this width value to the swap - chain description
     HRESULT hr = pFactory->CreateSwapChainForHwnd(pCommandQueue, hwnd, &swapChainDesc, nullptr, nullptr, &pSwapChain);
     if (FAILED(hr))
     {
@@ -78,6 +83,8 @@ ID3D12Device5Ptr createDevice(IDXGIFactory4Ptr pDxgiFactory)
 #endif
         // Create the device
         ID3D12Device5Ptr pDevice;
+        // IID_PPV_ARGS: used to retrieve an interface pointer, supplying the IID value of the requested interface,
+        // automatically based on the type of the interface pointer used
         d3d_call(D3D12CreateDevice(pAdapter, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&pDevice)));
 
         D3D12_FEATURE_DATA_D3D12_OPTIONS5 features5;
@@ -98,6 +105,7 @@ ID3D12CommandQueuePtr createCommandQueue(ID3D12Device5Ptr pDevice)
     ID3D12CommandQueuePtr pQueue;
     D3D12_COMMAND_QUEUE_DESC cqDesc = {};
     cqDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+    // D3D12_COMMAND_LIST_TYPE_DIRECT: command queue used to execute draw, compute, and copy commands
     cqDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
     d3d_call(pDevice->CreateCommandQueue(&cqDesc, IID_PPV_ARGS(&pQueue)));
     return pQueue;
@@ -108,6 +116,7 @@ ID3D12DescriptorHeapPtr createDescriptorHeap(ID3D12Device5Ptr pDevice, uint32_t 
     D3D12_DESCRIPTOR_HEAP_DESC desc = {};
     desc.NumDescriptors = count;
     desc.Type = type;
+    //  D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE: descriptor heap bound on a command list for reference by shaders
     desc.Flags = shaderVisible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 
     ID3D12DescriptorHeapPtr pHeap;
@@ -133,6 +142,7 @@ void resourceBarrier(ID3D12GraphicsCommandList4Ptr pCmdList, ID3D12ResourcePtr p
     D3D12_RESOURCE_BARRIER barrier = {};
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
     barrier.Transition.pResource = pResource;
+    // flag used to transition all subresources in a resource at the same time
     barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
     barrier.Transition.StateBefore = stateBefore;
     barrier.Transition.StateAfter = stateAfter;
@@ -202,7 +212,7 @@ void Tutorial02::endFrame(uint32_t rtvIndex)
     // Prepare the command list for the next frame
     uint32_t bufferIndex = mpSwapChain->GetCurrentBackBufferIndex();
 
-    // Make sure we have the new back-buffer is ready
+    // Make sure that the new back-buffer is ready
     if (mFenceValue > kDefaultSwapChainBuffers)
     {
         mpFence->SetEventOnCompletion(mFenceValue - kDefaultSwapChainBuffers + 1, mFenceEvent);

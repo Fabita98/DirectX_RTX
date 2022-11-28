@@ -61,6 +61,7 @@ namespace
 
         // Register the window class
         WNDCLASS wc = {};
+        // Pointer to the window procedure
         wc.lpfnWndProc = msgProc;
         wc.hInstance = GetModuleHandle(nullptr);
         wc.lpszClassName = className;

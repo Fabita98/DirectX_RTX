@@ -340,7 +340,7 @@ AccelerationStructureBuffers createTopLevelAS(ID3D12Device5Ptr pDevice, ID3D12Gr
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs = {};
     inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
     inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
-    inputs.NumDescs = 3;
+    inputs.NumDescs = 6;
     inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info;
@@ -353,18 +353,21 @@ AccelerationStructureBuffers createTopLevelAS(ID3D12Device5Ptr pDevice, ID3D12Gr
     tlasSize = info.ResultDataMaxSizeInBytes;
 
     // The instance desc should be inside a buffer, create and map the buffer
-    buffers.pInstanceDesc = createBuffer(pDevice, sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * 3, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, kUploadHeapProps);
+    buffers.pInstanceDesc = createBuffer(pDevice, sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * 6, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, kUploadHeapProps);
     D3D12_RAYTRACING_INSTANCE_DESC* instanceDescs;
     buffers.pInstanceDesc->Map(0, nullptr, (void**)&instanceDescs);
-    ZeroMemory(instanceDescs, sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * 3);
+    ZeroMemory(instanceDescs, sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * 6);
 
     // The transformation matrices for the instances
-    mat4 transformation[3];
-    transformation[0] = mat4(); // Identity
-    transformation[1] = translate(mat4(), vec3(-2, 0, 0));
-    transformation[2] = translate(mat4(), vec3(2, 0, 0));
+    mat4 transformation[6];
+    transformation[0] = translate(mat4(), vec3( 0, -1, 0));
+    transformation[1] = translate(mat4(), vec3(-2, -1, 0));
+    transformation[2] = translate(mat4(), vec3( 2, -1, 0));
+    transformation[3] = translate(mat4(), vec3(-2,  1, 0));
+    transformation[4] = translate(mat4(), vec3( 0,  1, 0));
+    transformation[5] = translate(mat4(), vec3( 2,  1, 0));
 
-    for (uint32_t i = 0; i < 3; i++)
+    for (uint32_t i = 0; i < 6; i++)
     {
         instanceDescs[i].InstanceID = i; // This value will be exposed to the shader via InstanceID()
         instanceDescs[i].InstanceContributionToHitGroupIndex = 0; // This is the offset inside the shader-table. We only have a single geometry, so the offset 0
@@ -702,7 +705,7 @@ void Tutorial09::createRtPipelineState()
     ExportAssociation rgsRootAssociation(&kRayGenShader, 1, &(subobjects[rgsRootIndex]));
     subobjects[index++] = rgsRootAssociation.subobject; // 3 Associate Root Sig to RGS
 
-    // Create the hit root-signature and association
+    // Create the hit LocalRoot-signature and association
     LocalRootSignature hitRootSignature(mpDevice, createHitRootDesc().desc);
     subobjects[index] = hitRootSignature.subobject; // 4 Hit Root Sig
 
@@ -854,7 +857,7 @@ void Tutorial09::createConstantBuffer()
         // C
         vec4(1.0f, 0.0f, 1.0f, 1.0f),
         vec4(1.0f, 1.0f, 0.0f, 1.0f),
-        vec4(0.0f, 1.0f, 1.0f, 1.0f),
+        vec4(0.0f, 1.0f, 1.0f, 1.0f)
     };
 
     mpConstantBuffer = createBuffer(mpDevice, sizeof(bufferData), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, kUploadHeapProps);

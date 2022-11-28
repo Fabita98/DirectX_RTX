@@ -512,7 +512,8 @@ struct DxilLibrary
     {
         stateSubobject.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY;
         stateSubobject.pDesc = &dxilLibDesc;
-
+        // lib desc cleaning and space allocation for export desc and names
+        //exports = entry points
         dxilLibDesc = {};
         exportDesc.resize(entryPointCount);
         exportName.resize(entryPointCount);
@@ -524,6 +525,7 @@ struct DxilLibrary
             dxilLibDesc.pExports = exportDesc.data();
 
             for (uint32_t i = 0; i < entryPointCount; i++)
+                // caching entry-point name into string vectors
             {
                 exportName[i] = entryPoint[i];
                 exportDesc[i].Name = exportName[i].c_str();
@@ -562,6 +564,7 @@ struct HitProgram
         desc = {};
         desc.AnyHitShaderImport = ahsExport;
         desc.ClosestHitShaderImport = chsExport;
+        // HitGroupExport: used to identify this particular hit-group later
         desc.HitGroupExport = exportName.c_str();
 
         subObject.Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
@@ -579,6 +582,7 @@ struct ExportAssociation
     {
         association.NumExports = exportCount;
         association.pExports = exportNames;
+        // passing the address of subobjects[rgsRootIndex] later and not rgsRootSignature.subobject
         association.pSubobjectToAssociate = pSubobjectToAssociate;
 
         subobject.Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION;
