@@ -104,5 +104,5 @@ private:
     // Tutorial 10
     //////////////////////////////////////////////////////////////////////////
     void createConstantBuffers();
-    ID3D12ResourcePtr mpConstantBuffer[3];
+    ID3D12ResourcePtr mpConstantBuffer[6]; // [i] changes is the number of per-instance buffer -> 6 instances have 6 different buffers associated 
 };

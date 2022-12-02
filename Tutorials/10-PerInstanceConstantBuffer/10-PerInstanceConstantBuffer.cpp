@@ -800,7 +800,7 @@ void Tutorial10::createShaderTable()
     {
         uint8_t* pHitEntry = pData + mShaderTableEntrySize * (i + 2); // +2 skips the ray-gen and miss entries
         memcpy(pHitEntry, pRtsoProps->GetShaderIdentifier(kHitGroup), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-        uint8_t* pCbDesc = pHitEntry + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;            // The location of the root-descriptor
+        uint8_t* pCbDesc = pHitEntry + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES; // The location of the root-descriptor
         assert(((uint64_t)pCbDesc % 8) == 0); // Root descriptor must be stored at an 8-byte aligned address
         *(D3D12_GPU_VIRTUAL_ADDRESS*)pCbDesc = mpConstantBuffer[i]->GetGPUVirtualAddress();
     }
@@ -818,7 +818,7 @@ void Tutorial10::createShaderResources()
     D3D12_RESOURCE_DESC resDesc = {};
     resDesc.DepthOrArraySize = 1;
     resDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-    resDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // The back buffer is actually DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, but sRGB formats can't be used with UAVs. We will convert to sRGB ourselves in the shader
+    resDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // The backbuffer is actually DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, but sRGB formats can't be used with UAVs. We will convert to sRGB ourselves in the shader
     resDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     resDesc.Height = mSwapChainSize.y;
     resDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
@@ -850,7 +850,7 @@ void Tutorial10::createShaderResources()
 //////////////////////////////////////////////////////////////////////////
 void Tutorial10::createConstantBuffers()
 {
-    // The shader declares each CB with 3 float3. However, due to HLSL packing rules, we create the CB with float4 (each float3 needs to start on a 16-byte boundary)
+    // The shader declares each CB with 3 float3. However, due to HLSL packing rules, we create the CB with vec4 (each float3 needs to start on a 16-byte boundary)
     vec4 bufferData[] = 
     {   // 0 - 2 bottom triangles
         // Instance 0
