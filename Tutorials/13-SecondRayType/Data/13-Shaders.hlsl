@@ -116,6 +116,7 @@ void planeChs(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes
     payload.color = float4(0.9f, 0.9f, 0.9f, 1.0f) * factor;
 }
 
+// it would have been more efficient to use the Any-shit shader but, using D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE flag, Any-hit shader won't be used
 [shader("closesthit")]
 void shadowChs(inout ShadowPayload payload, in BuiltInTriangleIntersectionAttributes attribs)
 {
