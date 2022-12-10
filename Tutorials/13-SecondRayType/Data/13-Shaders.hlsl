@@ -70,7 +70,8 @@ void rayGen()
     ray.TMax = 100000;
 
     RayPayload payload;
-    TraceRay( gRtScene, 0 /*rayFlags*/, 0xFF, 0 /* ray index*/, 2, 0, ray, payload );
+    // TraceRay( TLAS SRV, rayFlags for traversal behavior, ray-mask -> no culling, RayContributionToHitGroupIndex = rayIndex, MultiplierForGeometryContributionToHitGroupIndex for multiple geometry (instance 0: plane + triangle = 2), miss-shaderIndex = rayIndex, rayDesc obj, payload)
+    TraceRay( gRtScene, 0, 0xFF, 0, 2, 0, ray, payload);
     float3 col = linearToSrgb(payload.color);
     gOutput[launchIndex.xy] = float4(col, 1);
 }
@@ -96,9 +97,9 @@ struct ShadowPayload
 [shader("closesthit")]
 void planeChs(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attribs)
 {
-    float hitT = RayTCurrent();
-    float3 rayDirW = WorldRayDirection();
-    float3 rayOriginW = WorldRayOrigin();
+    float  hitT = RayTCurrent(); // parametric distance between ray_origin and intersection_point along ray_dir
+    float3 rayDirW = WorldRayDirection(); // world-space dir of incoming ray
+    float3 rayOriginW = WorldRayOrigin(); // world-space origin of incoming ray
 
     // Find the world-space hit position
     float3 posW = rayOriginW + hitT * rayDirW;
@@ -110,7 +111,8 @@ void planeChs(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes
     ray.TMin = 0.01;
     ray.TMax = 100000;
     ShadowPayload shadowPayload;
-    TraceRay(gRtScene, 0  /*rayFlags*/, 0xFF, 1 /* ray index*/, 0, 1, ray, shadowPayload);
+    // this time RayContributionToHitGroupIndex and MissShaderIndex set to 1 because of shadow ray type
+    TraceRay(gRtScene, 0, 0xFF, 1, 0, 1, ray, shadowPayload);
 
     float factor = shadowPayload.hit ? 0.1 : 1.0;
     payload.color = float4(0.9f, 0.9f, 0.9f, 1.0f) * factor;
