@@ -387,7 +387,7 @@ AccelerationStructureBuffers createTopLevelAS(ID3D12Device5Ptr pDevice, ID3D12Gr
     // The transformation matrices for the instances
     mat4 transformation[6];
     // transformations applied to not make triangles overlap
-    transformation[0] = translate(mat4(), vec3( 0,  -0.6f,  -0.6f)); // don't know why this instance is stuck in the center,no matter what are the transf_param passed
+    transformation[0] = translate(mat4(), vec3( 0,  -0.6f,  -0.6f)); // the shadow of this instance cannot be visible in the static version; on refit, becoming dinamic, the shadow becomes visible
     transformation[1] = translate(mat4(), vec3(-2,  -0.6f,  -0.3f));
     transformation[2] = translate(mat4(), vec3( 2,  -0.6f,  -0.3f));
     // triangles above the plane ( the flying triangles )

@@ -356,7 +356,7 @@ void buildTopLevelAS(ID3D12Device5Ptr pDevice, ID3D12GraphicsCommandList4Ptr pCm
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs = {};
     inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
     inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
-    inputs.NumDescs = 3;
+    inputs.NumDescs = 6; // the number changes with number of triangles instances
     inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info;
@@ -375,21 +375,26 @@ void buildTopLevelAS(ID3D12Device5Ptr pDevice, ID3D12GraphicsCommandList4Ptr pCm
         // If this is not an update operation then we need to create the buffers, otherwise we will refit in-place
         buffers.pScratch = createBuffer(pDevice, info.ScratchDataSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, kDefaultHeapProps);
         buffers.pResult = createBuffer(pDevice, info.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, kDefaultHeapProps);
-        buffers.pInstanceDesc = createBuffer(pDevice, sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * 3, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, kUploadHeapProps);
+        buffers.pInstanceDesc = createBuffer(pDevice, sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * 6, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, kUploadHeapProps);
         tlasSize = info.ResultDataMaxSizeInBytes;
     }
 
     // Map the instance desc buffer
     D3D12_RAYTRACING_INSTANCE_DESC* instanceDescs;
     buffers.pInstanceDesc->Map(0, nullptr, (void**)&instanceDescs);
-    ZeroMemory(instanceDescs, sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * 3);
+    ZeroMemory(instanceDescs, sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * 6); // the number depends on the instances (triangles)
 
     // The transformation matrices for the instances
-    mat4 transformation[3];
+    mat4 transformation[6];
     mat4 rotationMat = eulerAngleY(rotation);
-    transformation[0] = mat4();
-    transformation[1] = translate(mat4(), vec3(-2, 0, 0)) * rotationMat;
-    transformation[2] = translate(mat4(), vec3(2, 0, 0)) * rotationMat;
+    // transformations applied to not make triangles overlap
+    transformation[0] = translate(mat4(), vec3(0,  -0.6f, -0.6f)); // don't know why this instance is stuck in the center,no matter what are the transf_param passed
+    transformation[1] = translate(mat4(), vec3(-2, -0.6f, -0.3f)) * rotationMat;
+    transformation[2] = translate(mat4(), vec3(2,  -0.6f, -0.3f)) * rotationMat;
+    // triangles above the plane ( the flying triangles )
+    transformation[3] = translate(mat4(), vec3(-2,  0.3f,     0)) * rotationMat;
+    transformation[4] = translate(mat4(), vec3( 0,  0.3f,     0)) * rotationMat;
+    transformation[5] = translate(mat4(), vec3( 2,  0.3f,     0)) * rotationMat;
 
     // The InstanceContributionToHitGroupIndex is set based on the shader-table layout specified in createShaderTable()
     // Create the desc for the triangle/plane instance
@@ -400,10 +405,10 @@ void buildTopLevelAS(ID3D12Device5Ptr pDevice, ID3D12GraphicsCommandList4Ptr pCm
     instanceDescs[0].AccelerationStructure = pBottomLevelAS[0]->GetGPUVirtualAddress();
     instanceDescs[0].InstanceMask = 0xFF;
     
-    for (uint32_t i = 1; i < 3; i++)
+    for (uint32_t i = 1; i < 6; i++)
     {
         instanceDescs[i].InstanceID = i; // This value will be exposed to the shader via InstanceID()
-        instanceDescs[i].InstanceContributionToHitGroupIndex = (i * 2) + 2;  // The indices are relative to to the start of the hit-table entries specified in Raytrace(), so we need 4 and 6
+        instanceDescs[i].InstanceContributionToHitGroupIndex = (i * 2) + 2;  // The indices are relative to the start of the hit-table entries specified in Raytrace(), so we need 4, 6, 8, 10 and 12
         instanceDescs[i].Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
         mat4 m = transpose(transformation[i]); // GLM is column major, the INSTANCE_DESC is row major
         memcpy(instanceDescs[i].Transform, &m, sizeof(instanceDescs[i].Transform));
@@ -444,7 +449,7 @@ void Tutorial14::createAccelerationStructures()
     AccelerationStructureBuffers bottomLevelBuffers[2];
 
     // The first bottom-level buffer is for the plane and the triangle
-    const uint32_t vertexCount[] = { 3, 6 };// Triangle has 3 vertices, plane has 6
+    const uint32_t vertexCount[] = { 3, 6 }; // Triangle has 3 vertices, plane has 6
     bottomLevelBuffers[0] = createBottomLevelAS(mpDevice, mpCmdList, mpVertexBuffer, vertexCount, 2);
     mpBottomLevelAS[0] = bottomLevelBuffers[0].pResult;
 
@@ -774,7 +779,7 @@ void Tutorial14::createRtPipelineState()
 
     // Create the plane HitProgram
     HitProgram planeHitProgram(nullptr, kPlaneChs, kPlaneHitGroup);
-    subobjects[index++] = planeHitProgram.subObject; // 2 Plant Hit Group
+    subobjects[index++] = planeHitProgram.subObject; // 2 Plane Hit Group
 
     // Create the shadow-ray hit group
     HitProgram shadowHitProgram(nullptr, kShadowChs, kShadowHitGroup);
@@ -855,6 +860,10 @@ void Tutorial14::createShaderTable()
         Entries 5,6 - Hit programs for the plane (primary followed by shadow)
         Entries 7,8 - Hit programs for triangle 1 (primary followed by shadow)
         Entries 9,10 - Hit programs for triangle 2 (primary followed by shadow)
+        Entries 11,12 - Hit programs for triangle 3 (primary followed by shadow)
+        Entries 13,14 - Hit programs for triangle 4 (primary followed by shadow)
+        Entries 15,16 - Hit programs for triangle 5 (primary followed by shadow)
+
         All entries in the shader-table must have the same size, so we will choose it base on the largest required entry.
         The triangle primary-ray hit program requires the largest entry - sizeof(program identifier) + 8 bytes for the constant-buffer root descriptor.
         The entry size must be aligned up to D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT
@@ -864,8 +873,8 @@ void Tutorial14::createShaderTable()
     mShaderTableEntrySize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
     mShaderTableEntrySize += 8; // The hit shader constant-buffer descriptor
     mShaderTableEntrySize = align_to(D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT, mShaderTableEntrySize);
-    uint32_t shaderTableSize = mShaderTableEntrySize * 11;
-
+    // shaderTableSize is now composed by 17 entries: 1 for RayGen, 2 for Miss and 14 hit instances (plane + triangles)
+    uint32_t shaderTableSize = mShaderTableEntrySize * 17;
     // For simplicity, we create the shader-table on the upload heap. You can also create it on the default heap
     mpShaderTable = createBuffer(mpDevice, shaderTableSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, kUploadHeapProps);
 
@@ -926,6 +935,35 @@ void Tutorial14::createShaderTable()
     // Entry 10 - Triangle 2, shadow ray. ProgramID only
     uint8_t* pEntry10 = pData + mShaderTableEntrySize * 10;
     memcpy(pEntry10, pRtsoProps->GetShaderIdentifier(kShadowHitGroup), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    // Entry 11 - Triangle 3, primary ray. ProgramID and constant-buffer data
+    uint8_t* pEntry11 = pData + mShaderTableEntrySize * 11;
+    memcpy(pEntry11, pRtsoProps->GetShaderIdentifier(kTriHitGroup), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    assert(((uint64_t)(pEntry11 + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) % 8) == 0); // Root descriptor must be stored at an 8-byte aligned address
+    *(D3D12_GPU_VIRTUAL_ADDRESS*)(pEntry11 + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = mpConstantBuffer[3]->GetGPUVirtualAddress();
+
+    // Entry 12 - Triangle 3, shadow ray. ProgramID only
+    uint8_t* pEntry12 = pData + mShaderTableEntrySize * 12;
+    memcpy(pEntry12, pRtsoProps->GetShaderIdentifier(kShadowHitGroup), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+
+    // Entry 13 - Triangle 4, primary ray. ProgramID and constant-buffer data
+    uint8_t* pEntry13 = pData + mShaderTableEntrySize * 13;
+    memcpy(pEntry13, pRtsoProps->GetShaderIdentifier(kTriHitGroup), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    assert(((uint64_t)(pEntry13 + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) % 8) == 0); // Root descriptor must be stored at an 8-byte aligned address
+    *(D3D12_GPU_VIRTUAL_ADDRESS*)(pEntry13 + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = mpConstantBuffer[4]->GetGPUVirtualAddress();
+
+    // Entry 14 - Triangle 4, shadow ray. ProgramID only
+    uint8_t* pEntry14 = pData + mShaderTableEntrySize * 14;
+    memcpy(pEntry14, pRtsoProps->GetShaderIdentifier(kShadowHitGroup), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+
+    // Entry 15 - Triangle 5, primary ray. ProgramID and constant-buffer data
+    uint8_t* pEntry15 = pData + mShaderTableEntrySize * 15;
+    memcpy(pEntry15, pRtsoProps->GetShaderIdentifier(kTriHitGroup), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    assert(((uint64_t)(pEntry15 + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) % 8) == 0); // Root descriptor must be stored at an 8-byte aligned address
+    *(D3D12_GPU_VIRTUAL_ADDRESS*)(pEntry15 + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = mpConstantBuffer[5]->GetGPUVirtualAddress();
+
+    // Entry 16 - Triangle 5, shadow ray. ProgramID only
+    uint8_t* pEntry16 = pData + mShaderTableEntrySize * 16;
+    memcpy(pEntry16, pRtsoProps->GetShaderIdentifier(kShadowHitGroup), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 
     // Unmap
     mpShaderTable->Unmap(0, nullptr);
@@ -973,7 +1011,8 @@ void Tutorial14::createShaderResources()
 void Tutorial14::createConstantBuffers()
 {
     // The shader declares each CB with 3 float3. However, due to HLSL packing rules, we create the CB with vec4 (each float3 needs to start on a 16-byte boundary)
-    vec4 bufferData[] = {
+    vec4 bufferData[] = {    
+        // 0 - 2 bottom triangles
         // Instance 0
         vec4(1.0f, 0.0f, 0.0f, 1.0f),
         vec4(1.0f, 1.0f, 0.0f, 1.0f),
@@ -988,14 +1027,30 @@ void Tutorial14::createConstantBuffers()
         vec4(0.0f, 0.0f, 1.0f, 1.0f),
         vec4(1.0f, 0.0f, 1.0f, 1.0f),
         vec4(0.0f, 1.0f, 1.0f, 1.0f),
+        // 3 - 5 top triangles
+       // Instance 3
+        vec4(0.0f, 1.0f, 0.0f, 1.0f),
+        vec4(0.0f, 1.0f, 1.0f, 1.0f),
+        vec4(1.0f, 1.0f, 0.0f, 1.0f),
+
+        // Instance 4
+        vec4(1.0f, 0.0f, 0.0f, 1.0f),
+        vec4(1.0f, 1.0f, 0.0f, 1.0f),
+        vec4(1.0f, 0.0f, 1.0f, 1.0f),
+
+        // Instance 5
+        vec4(0.0f, 0.0f, 1.0f, 1.0f),
+        vec4(1.0f, 0.0f, 1.0f, 1.0f),
+        vec4(0.0f, 1.0f, 1.0f, 1.0f),
     };
 
-    for(uint32_t i = 0 ; i < 3 ; i++)
+    for(uint32_t i = 0 ; i < 6 ; i++)
     {
-        const uint32_t bufferSize = sizeof(vec4) * 3;
+        const uint32_t bufferSize = sizeof(vec4) * 3; // of course, size of buffers remain the same even adding more instances, hence, more buffers
         mpConstantBuffer[i] = createBuffer(mpDevice, bufferSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, kUploadHeapProps);
         uint8_t* pData;
         d3d_call(mpConstantBuffer[i]->Map(0, nullptr, (void**)&pData));
+        // &bufferData[i * 3] : remains the same, no need to change it accordingly to the triangle instances involved
         memcpy(pData, &bufferData[i * 3], sizeof(bufferData));
         mpConstantBuffer[i]->Unmap(0, nullptr);
     }
@@ -1037,13 +1092,13 @@ void Tutorial14::onFrameRender()
     size_t missOffset = 1 * mShaderTableEntrySize;
     raytraceDesc.MissShaderTable.StartAddress = mpShaderTable->GetGPUVirtualAddress() + missOffset;
     raytraceDesc.MissShaderTable.StrideInBytes = mShaderTableEntrySize;
-    raytraceDesc.MissShaderTable.SizeInBytes = mShaderTableEntrySize * 2;   // 2 miss-entries
+    raytraceDesc.MissShaderTable.SizeInBytes = mShaderTableEntrySize * 2;   // 2 miss-entries (primary and shadow)
 
     // Hit is the fourth entry in the shader-table
     size_t hitOffset = 3 * mShaderTableEntrySize;
     raytraceDesc.HitGroupTable.StartAddress = mpShaderTable->GetGPUVirtualAddress() + hitOffset;
     raytraceDesc.HitGroupTable.StrideInBytes = mShaderTableEntrySize;
-    raytraceDesc.HitGroupTable.SizeInBytes = mShaderTableEntrySize * 8;    // 8 hit-entries
+    raytraceDesc.HitGroupTable.SizeInBytes = mShaderTableEntrySize * 14;    // 14 hit-entries
 
     // Bind the empty root signature
     mpCmdList->SetComputeRootSignature(mpEmptyRootSig);
