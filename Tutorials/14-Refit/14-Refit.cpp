@@ -388,13 +388,13 @@ void buildTopLevelAS(ID3D12Device5Ptr pDevice, ID3D12GraphicsCommandList4Ptr pCm
     mat4 transformation[6];
     mat4 rotationMat = eulerAngleY(rotation);
     // transformations applied to not make triangles overlap
-    transformation[0] = translate(mat4(), vec3(0,  -0.6f, -0.6f)); // don't know why this instance is stuck in the center,no matter what are the transf_param passed
-    transformation[1] = translate(mat4(), vec3(-2, -0.6f, -0.3f)) * rotationMat;
-    transformation[2] = translate(mat4(), vec3(2,  -0.6f, -0.3f)) * rotationMat;
+    transformation[0] = translate(mat4(), vec3( 0,  -0.6f,  -0.6f));
+    transformation[1] = translate(mat4(), vec3(-2,  -0.6f,  -0.3f)) * rotationMat;
+    transformation[2] = translate(mat4(), vec3( 2,  -0.6f,  -0.3f)) * rotationMat;
     // triangles above the plane ( the flying triangles )
-    transformation[3] = translate(mat4(), vec3(-2,  0.3f,     0)) * rotationMat;
-    transformation[4] = translate(mat4(), vec3( 0,  0.3f,     0)) * rotationMat;
-    transformation[5] = translate(mat4(), vec3( 2,  0.3f,     0)) * rotationMat;
+    transformation[3] = translate(mat4(), vec3(-4,  0.3f,  1)) * rotationMat;
+    transformation[4] = translate(mat4(), vec3( 0,  1.9f,  1)) * rotationMat;
+    transformation[5] = translate(mat4(), vec3( 4,  0.3f,  1)) * rotationMat;
 
     // The InstanceContributionToHitGroupIndex is set based on the shader-table layout specified in createShaderTable()
     // Create the desc for the triangle/plane instance
