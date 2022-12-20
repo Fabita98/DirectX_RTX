@@ -87,7 +87,7 @@ ID3D12Device5Ptr createDevice(IDXGIFactory4Ptr pDxgiFactory)
 #endif
         // Create the device
         ID3D12Device5Ptr pDevice;
-        d3d_call(D3D12CreateDevice(pAdapter, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&pDevice)));
+        d3d_call(D3D12CreateDevice(pAdapter, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&pDevice))) noexcept ( D3D12CreateDevice );
 
         D3D12_FEATURE_DATA_D3D12_OPTIONS5 features5;
         HRESULT hr = pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &features5, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS5));
