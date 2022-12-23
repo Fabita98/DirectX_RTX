@@ -47,6 +47,7 @@ float3 linearToSrgb(float3 c)
 
 struct RayPayload
 {
+    bool hasTransparency;
     float3 color;
 };
 
@@ -69,11 +70,19 @@ void rayGen()
     ray.TMin = 0;
     ray.TMax = 100000;
 
-    RayPayload payload;
-    // TraceRay( TLAS SRV, rayFlags for traversal behavior, ray-mask -> no culling, RayContributionToHitGroupIndex = rayIndex, MultiplierForGeometryContributionToHitGroupIndex for multiple geometry (instance 0: plane + triangle = 2), miss-shaderIndex = rayIndex, rayDesc obj, payload)
-    TraceRay( gRtScene, 0, 0xFF, 0, 2, 0, ray, payload);
-    float3 col = linearToSrgb(payload.color);
-    gOutput[launchIndex.xy] = float4(col, 1);
+    RayPayload NoTransPayload;
+    NoTransPayload.hasTransparency = false;
+
+    RayPayload transparencyPayload;
+    transparencyPayload.hasTransparency = true;
+
+    // TraceRay( TLAS SRV, rayFlags for traversal behavior, ray-mask -> 0xFF = no culling, RayContributionToHitGroupIndex = rayIndex, MultiplierForGeometryContributionToHitGroupIndex for multiple geometry (instance 0: plane + triangle = 2), miss-shaderIndex = rayIndex, rayDesc obj, payload)
+    TraceRay(gRtScene, 0, 0x80, 0, 2, 0, ray, NoTransPayload);  // 0x80 CULL_NON_OPAQUE
+    TraceRay(gRtScene, 0, 0x40, 0, 1, 0, ray, transparencyPayload); // 0x40 CULL_OPAQUE
+    float3 col = linearToSrgb(NoTransPayload.color);
+    gOutput[launchIndex.xy] = float4(col, 1); 
+    float3 col1 = linearToSrgb(transparencyPayload.color);
+    gOutput[launchIndex.xy] = float4(col1, 1);
 }
 
 [shader("miss")]
@@ -86,7 +95,14 @@ void miss(inout RayPayload payload)
 void triangleChs(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attribs)
 {
     float3 barycentrics = float3(1.0 - attribs.barycentrics.x - attribs.barycentrics.y, attribs.barycentrics.x, attribs.barycentrics.y);
-    payload.color = A * barycentrics.x + B * barycentrics.y + C * barycentrics.z;
+    if(payload.hasTransparency) 
+    {
+        payload.color = A * (barycentrics.x + 1) + B * (barycentrics.y + 1) + C * (barycentrics.z + 1);
+    }
+    else 
+    {
+        payload.color = A * barycentrics.x + B * barycentrics.y + C * barycentrics.z;
+    }
 }
 
 struct ShadowPayload

@@ -38,9 +38,9 @@ public:
         ID3D12ResourcePtr pInstanceDesc;    // Used only for top-level AS
     };
 
-    void onLoad(HWND winHandle, uint32_t winWidth, uint32_t winHeight) override;
-    void onFrameRender() override;
-    void onShutdown() override;
+    void onLoad(HWND winHandle, uint32_t winWidth, uint32_t winHeight);
+    void onFrameRender();
+    void onShutdown();
 private:
     //////////////////////////////////////////////////////////////////////////
     // Tutorial 02 code

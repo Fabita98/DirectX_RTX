@@ -314,7 +314,7 @@ Tutorial14::AccelerationStructureBuffers createBottomLevelAS(ID3D12Device5Ptr pD
         geomDesc[i].Triangles.VertexBuffer.StrideInBytes = sizeof(vec3);
         geomDesc[i].Triangles.VertexCount = vertexCount[i];
         geomDesc[i].Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
-        geomDesc[i].Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+        geomDesc[i].Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE; // @overrided on per-instance behavior
     }
 
     // Get the size requirements for the scratch and AS buffers
@@ -388,32 +388,47 @@ void buildTopLevelAS(ID3D12Device5Ptr pDevice, ID3D12GraphicsCommandList4Ptr pCm
     mat4 transformation[6];
     mat4 rotationMat = eulerAngleY(rotation);
     // transformations applied to not make triangles overlap
-    transformation[0] = translate(mat4(), vec3( 0,  -0.6f,  -0.6f));
+    // 0 - 2 foreground triangles -> 1,2 TRANSPARENT
+    transformation[0] = mat4();
     transformation[1] = translate(mat4(), vec3(-2,  -0.6f,  -0.3f)) * rotationMat;
     transformation[2] = translate(mat4(), vec3( 2,  -0.6f,  -0.3f)) * rotationMat;
-    // triangles above the plane ( the flying triangles )
-    transformation[3] = translate(mat4(), vec3(-4,  0.3f,  1)) * rotationMat;
-    transformation[4] = translate(mat4(), vec3( 0,  1.9f,  1)) * rotationMat;
-    transformation[5] = translate(mat4(), vec3( 4,  0.3f,  1)) * rotationMat;
+    // rotating and background triangles -> OPAQUE
+    transformation[3] = translate(mat4(), vec3(-4,  0.3f,    1)) * rotationMat;
+    transformation[4] = translate(mat4(), vec3( 0, -0.4f,    1)) * rotationMat;
+    transformation[5] = translate(mat4(), vec3( 4,  0.3f,    1)) * rotationMat;
 
     // The InstanceContributionToHitGroupIndex is set based on the shader-table layout specified in createShaderTable()
     // Create the desc for the triangle/plane instance
     instanceDescs[0].InstanceID = 0;
     instanceDescs[0].InstanceContributionToHitGroupIndex = 0;
-    instanceDescs[0].Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
+    instanceDescs[0].Flags = D3D12_RAY_FLAG_NONE;
     memcpy(instanceDescs[0].Transform, &transformation[0], sizeof(instanceDescs[0].Transform));
     instanceDescs[0].AccelerationStructure = pBottomLevelAS[0]->GetGPUVirtualAddress();
     instanceDescs[0].InstanceMask = 0xFF;
     
-    for (uint32_t i = 1; i < 6; i++)
+    // 1,2 TRANSPARENT
+    for (uint32_t i = 1; i < 3; i++)
     {
         instanceDescs[i].InstanceID = i; // This value will be exposed to the shader via InstanceID()
         instanceDescs[i].InstanceContributionToHitGroupIndex = (i * 2) + 2;  // The indices are relative to the start of the hit-table entries specified in Raytrace(), so we need 4, 6, 8, 10 and 12
-        instanceDescs[i].Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
         mat4 m = transpose(transformation[i]); // GLM is column major, the INSTANCE_DESC is row major
         memcpy(instanceDescs[i].Transform, &m, sizeof(instanceDescs[i].Transform));
         instanceDescs[i].AccelerationStructure = pBottomLevelAS[1]->GetGPUVirtualAddress();
-        instanceDescs[i].InstanceMask = 0xFF;
+        instanceDescs[i].InstanceMask = 0x40 ; // RAY_FLAG_CULL_OPAQUE                                     
+        // per-instance @override
+        instanceDescs[i].Flags = D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_NON_OPAQUE;
+    }
+
+    for (uint32_t i = 3; i < 6; i++) 
+    {
+        instanceDescs[i].InstanceID = i;
+        instanceDescs[i].InstanceContributionToHitGroupIndex = (i * 2) + 2;  
+        mat4 m = transpose(transformation[i]);
+        memcpy(instanceDescs[i].Transform, &m, sizeof(instanceDescs[i].Transform));
+        instanceDescs[i].AccelerationStructure = pBottomLevelAS[1]->GetGPUVirtualAddress();        
+        instanceDescs[i].InstanceMask = 0x80; // RAY_FLAG_CULL_NON_OPAQUE                                                          
+        // per-instance @override
+        instanceDescs[i].Flags = D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_OPAQUE;
     }
 
     // Unmap
@@ -821,7 +836,7 @@ void Tutorial14::createRtPipelineState()
     subobjects[index++] = emptyRootAssociation.subobject; // 11 Associate empty root sig to Plane Hit Group and Miss shader
 
     // Bind the payload size to all programs
-    ShaderConfig primaryShaderConfig(sizeof(float) * 2, sizeof(float) * 3);
+    ShaderConfig primaryShaderConfig(sizeof(float) * 2, sizeof(float) * 4); // added bool for possible instance_test transparency flag
     subobjects[index] = primaryShaderConfig.subobject; // 12
 
     uint32_t primaryShaderConfigIndex = index++;
