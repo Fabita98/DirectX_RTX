@@ -388,26 +388,27 @@ void buildTopLevelAS(ID3D12Device5Ptr pDevice, ID3D12GraphicsCommandList4Ptr pCm
     mat4 transformation[6];
     mat4 rotationMat = eulerAngleY(rotation);
     // transformations applied to not make triangles overlap
-    // 0 - 2 foreground triangles -> 1,2 TRANSPARENT
-    transformation[0] = mat4();
+    // 1,2,3 foreground triangles -> 1,2,3 TRANSPARENT
     transformation[1] = translate(mat4(), vec3(-2,  -0.6f,  -0.3f)) * rotationMat;
-    transformation[2] = translate(mat4(), vec3( 2,  -0.6f,  -0.3f)) * rotationMat;
-    // rotating and background triangles -> OPAQUE
-    transformation[3] = translate(mat4(), vec3(-4,  0.3f,    1)) * rotationMat;
-    transformation[4] = translate(mat4(), vec3( 0, -0.4f,    1)) * rotationMat;
-    transformation[5] = translate(mat4(), vec3( 4,  0.3f,    1)) * rotationMat;
+    transformation[2] = translate(mat4(), vec3( 0,  -0.6,  -0.5f)) * rotationMat;
+    transformation[3] = translate(mat4(), vec3( 2,  -0.6f, -0.3f)) * rotationMat;
+    
+    // background triangles -> OPAQUE
+    transformation[0] = mat4();
+    transformation[4] = translate(mat4(), vec3( -4,  0.3f,  1)) * rotationMat;
+    transformation[5] = translate(mat4(), vec3(  4,  0.3f,  1)) * rotationMat;
 
     // The InstanceContributionToHitGroupIndex is set based on the shader-table layout specified in createShaderTable()
     // Create the desc for the triangle/plane instance
     instanceDescs[0].InstanceID = 0;
     instanceDescs[0].InstanceContributionToHitGroupIndex = 0;
-    instanceDescs[0].Flags = D3D12_RAY_FLAG_NONE;
     memcpy(instanceDescs[0].Transform, &transformation[0], sizeof(instanceDescs[0].Transform));
     instanceDescs[0].AccelerationStructure = pBottomLevelAS[0]->GetGPUVirtualAddress();
-    instanceDescs[0].InstanceMask = 0xFF;
+    instanceDescs[0].InstanceMask = 0x80;
+    instanceDescs[0].Flags = D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_OPAQUE;
     
-    // 1,2 TRANSPARENT
-    for (uint32_t i = 1; i < 3; i++)
+    // 1,2,3 TRANSPARENT
+    for (uint32_t i = 1; i < 4; i++)
     {
         instanceDescs[i].InstanceID = i; // This value will be exposed to the shader via InstanceID()
         instanceDescs[i].InstanceContributionToHitGroupIndex = (i * 2) + 2;  // The indices are relative to the start of the hit-table entries specified in Raytrace(), so we need 4, 6, 8, 10 and 12
@@ -419,7 +420,7 @@ void buildTopLevelAS(ID3D12Device5Ptr pDevice, ID3D12GraphicsCommandList4Ptr pCm
         instanceDescs[i].Flags = D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_NON_OPAQUE;
     }
 
-    for (uint32_t i = 3; i < 6; i++) 
+    for (uint32_t i = 4; i < 6; i++) 
     {
         instanceDescs[i].InstanceID = i;
         instanceDescs[i].InstanceContributionToHitGroupIndex = (i * 2) + 2;  
@@ -1049,9 +1050,9 @@ void Tutorial14::createConstantBuffers()
         vec4(1.0f, 1.0f, 0.0f, 1.0f),
 
         // Instance 4
-        vec4(1.0f, 0.0f, 0.0f, 1.0f),
+        vec4(0.0f, 1.0f, 0.0f, 1.0f),
+        vec4(0.0f, 1.0f, 1.0f, 1.0f),
         vec4(1.0f, 1.0f, 0.0f, 1.0f),
-        vec4(1.0f, 0.0f, 1.0f, 1.0f),
 
         // Instance 5
         vec4(0.0f, 0.0f, 1.0f, 1.0f),

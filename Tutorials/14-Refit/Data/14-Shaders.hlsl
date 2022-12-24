@@ -64,7 +64,7 @@ void rayGen()
     float aspectRatio = dims.x / dims.y;
 
     RayDesc ray;
-    ray.Origin = float3(0, 0, -2);
+    ray.Origin = float3(0, 0, -2.5f);
     ray.Direction = normalize(float3(d.x * aspectRatio, -d.y, 1));
 
     ray.TMin = 0;
@@ -78,17 +78,22 @@ void rayGen()
 
     // TraceRay( TLAS SRV, rayFlags for traversal behavior, ray-mask -> 0xFF = no culling, RayContributionToHitGroupIndex = rayIndex, MultiplierForGeometryContributionToHitGroupIndex for multiple geometry (instance 0: plane + triangle = 2), miss-shaderIndex = rayIndex, rayDesc obj, payload)
     TraceRay(gRtScene, 0, 0x80, 0, 2, 0, ray, NoTransPayload);  // 0x80 CULL_NON_OPAQUE
-    TraceRay(gRtScene, 0, 0x40, 0, 1, 0, ray, transparencyPayload); // 0x40 CULL_OPAQUE
     float3 col = linearToSrgb(NoTransPayload.color);
-    gOutput[launchIndex.xy] = float4(col, 1); 
+    gOutput[launchIndex.xy] = float4(col, 1);
+    TraceRay(gRtScene, 0, 0x40, 0, 0, 0, ray, transparencyPayload); // 0x40 CULL_OPAQUE
     float3 col1 = linearToSrgb(transparencyPayload.color);
     gOutput[launchIndex.xy] = float4(col1, 1);
+    
+    
 }
 
 [shader("miss")]
 void miss(inout RayPayload payload)
 {
-    payload.color = float3(0.4, 0.6, 0.2);
+    if (!payload.hasTransparency)
+    {
+        payload.color = float3(0.4, 0.6, 0.2);
+    }
 }
 
 [shader("closesthit")]
@@ -129,7 +134,7 @@ void planeChs(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes
     // this time RayContributionToHitGroupIndex and MissShaderIndex set to 1 because of shadow ray type
     TraceRay(gRtScene, 0, 0xFF, 1, 0, 1, ray, shadowPayload);
     float factor = shadowPayload.hit ? 0.1 : 1.0;
-    payload.color = float4(0.9f, 0.9f, 0.9f, 1.0f) * factor;
+    payload.color = float4(0.7f, 0.7f, 0.7f, 1.0f) * factor;
 }
 
 [shader("closesthit")]
