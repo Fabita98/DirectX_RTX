@@ -75,16 +75,22 @@ void rayGen()
 
     RayPayload transparencyPayload;
     transparencyPayload.hasTransparency = true;
-
-    // TraceRay( TLAS SRV, rayFlags for traversal behavior, ray-mask -> 0xFF = no culling, RayContributionToHitGroupIndex = rayIndex, MultiplierForGeometryContributionToHitGroupIndex for multiple geometry (instance 0: plane + triangle = 2), miss-shaderIndex = rayIndex, rayDesc obj, payload)
-    TraceRay(gRtScene, 0, 0x80, 0, 2, 0, ray, NoTransPayload);  // 0x80 CULL_NON_OPAQUE
+    /* 
+    void TraceRay(TLAS SRV,
+        uint RayFlags for traversal behavior,
+        uint InstanceInclusionMask -> 0xFF = no culling,
+        uint RayContributionToHitGroupIndex = rayIndex -> 0 for primary ray and 1 for the shadow one,
+        uint MultiplierForGeometryContributionToHitGroupIndex -> GeomIndex is 0 for triangles and 1 for the plane; is the distance in records between geometries, which is 2 (as the ray count)
+        uint MissShaderIndex = rayIndex,
+        RayDesc Ray,
+        inout Payload); 
+    */
+    TraceRay(gRtScene, 0, 0x80, 0, 2, 0, ray, NoTransPayload);  // 0x80 CULL_NON_OPAQUE -> ray for OPAQUE instances (some triangles + plane); MultiplierForGeometryContributionToHitGroupIndex: affecting only instances with multiple geometries (instance 0)
     float3 col = linearToSrgb(NoTransPayload.color);
     gOutput[launchIndex.xy] = float4(col, 1);
-    TraceRay(gRtScene, 0, 0x40, 0, 0, 0, ray, transparencyPayload); // 0x40 CULL_OPAQUE
+    TraceRay(gRtScene, 0, 0x40, 0, 0, 0, ray, transparencyPayload); // 0x40 CULL_OPAQUE -> ray for NON_OPAQUE instances (only some triangles -> MultiplierForGeometryContributionToHitGroupIndex = 0)
     float3 col1 = linearToSrgb(transparencyPayload.color);
     gOutput[launchIndex.xy] = float4(col1, 1);
-    
-    
 }
 
 [shader("miss")]

@@ -314,7 +314,7 @@ Tutorial14::AccelerationStructureBuffers createBottomLevelAS(ID3D12Device5Ptr pD
         geomDesc[i].Triangles.VertexBuffer.StrideInBytes = sizeof(vec3);
         geomDesc[i].Triangles.VertexCount = vertexCount[i];
         geomDesc[i].Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
-        geomDesc[i].Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE; // @overrided on per-instance behavior
+        geomDesc[i].Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE; // @overrided on per-instance behavior for triangles, plane stays OPAQUE
     }
 
     // Get the size requirements for the scratch and AS buffers
