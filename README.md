@@ -1,7 +1,7 @@
 # DirectX_RTX
 ### Project for RTGP course in Unimi
-This is an extension of the original project made for the course for the course of "Real Time Graphics Programming" of Università degli studi di Milano. 
-Since the .docx in the original project gave for granted the familiarity with DirectX12,in the following document will be shown some necessary information for the ones that, like me, had no knowledge about DirectX12 and to give a better understanding of what is needed to understand the original version and the applied changes in the "*dev*" branch, through a brief explanation and the direct links to those specific topics on the DirectX documentation.
+This is an extension of the original project made for the course of "Real Time Graphics Programming" of Università degli studi di Milano. 
+Since the .docx files in the original project gave for granted the familiarity with DirectX12, in the following document there will be shown some necessary information for the ones that, like me, have no knowledge about DirectX12 before starting to work on it and to give a better understanding of what is needed for a good comprehension of not only original version, but also for the changes applied in the "*dev*" branch. This purpose will be realised through a brief explanation of the main DX12 structures and the direct links to those specific topics on the DirectX documentation.
 **GPU sync** through: **device creation** and entities like **swap-chain, command-queue, command-list, command-allocator, descriptor-heap** and **fence** will be shown in the following part.
 - **Adapter**: trivially, the GPU which supports ray tracing. Here for more: https://www.3dgep.com/learning-directx-12-1/#query-directx-12-adapter;
 - **Device**: a memory context that tracks allocations in GPU memory. Here for more: https://www.3dgep.com/learning-directx-12-1/#create-the-directx-12-device;
@@ -10,7 +10,7 @@ Since the .docx in the original project gave for granted the familiarity with Di
 https://www.3dgep.com/learning-directx-12-1/#command-queue;
 - **Command-list**: used to issue copy, compute (dispatch), or draw commands. Here for more: https://www.3dgep.com/learning-directx-12-1/#command-list;
 - **Command-allocator**: backing memory used by a command list which does not provide any functionality and can be accessed only by the command list. Here for more: https://www.3dgep.com/learning-directx-12-1/#create-a-command-allocator;
-- **Descriptor-heap**: starting from DirectX12, **RTV** (**render target view**) are stored in this data structure, where a view references a resource in the GPU memory. Here for more: https://www.3dgep.com/learning-directx-12-1/#preamble 
+- **Descriptor-heap**: starting from DirectX12, **RTV** (**render target view**) are stored in this data structure, where a view references a resource in the GPU memory. Here for more: https://www.3dgep.com/learning-directx-12-1/#preamble; 
 - **Fence**: for synchronizing commands sent to the command queue. Here for more: https://www.3dgep.com/learning-directx-12-1/#fence;
 
 Now that the main parts of DirectX12 should be clear, we can proceed to the core of the changes applied, taking in account only the final result and the operations needed to make it exist without any problem, since all the work can be seen in the commits preceding the final one.
