@@ -108,7 +108,7 @@ void triangleChs(inout RayPayload payload, in BuiltInTriangleIntersectionAttribu
     float3 barycentrics = float3(1.0 - attribs.barycentrics.x - attribs.barycentrics.y, attribs.barycentrics.x, attribs.barycentrics.y);
     if(payload.hasTransparency) 
     {
-        payload.color = A * (barycentrics.x + 1) + B * (barycentrics.y + 1) + C * (barycentrics.z + 1);
+        payload.color = A * (barycentrics.x + 0.65f) + B * (barycentrics.y + 0.65f) + C * (barycentrics.z + 0.65f);
     }
     else 
     {

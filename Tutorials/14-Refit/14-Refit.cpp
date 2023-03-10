@@ -388,12 +388,12 @@ void buildTopLevelAS(ID3D12Device5Ptr pDevice, ID3D12GraphicsCommandList4Ptr pCm
     mat4 transformation[6];
     mat4 rotationMat = eulerAngleY(rotation);
     // transformations applied to not make triangles overlap
-    // 1,2,3 foreground triangles -> 1,2,3 TRANSPARENT
-    transformation[1] = translate(mat4(), vec3(-2,  -0.6f,  -0.3f)) * rotationMat;
+    // 1,2,3 foreground triangles -> 1,2,3 TRANSPARENT from left to right
+    transformation[1] = translate(mat4(), vec3(-2,  -0.6f, -0.3f)) * rotationMat;
     transformation[2] = translate(mat4(), vec3( 0,  -0.6,  -0.5f)) * rotationMat;
     transformation[3] = translate(mat4(), vec3( 2,  -0.6f, -0.3f)) * rotationMat;
     
-    // background triangles -> OPAQUE
+    // background triangles -> OPAQUE: center, left and right
     transformation[0] = mat4();
     transformation[4] = translate(mat4(), vec3( -4,  0.3f,  1)) * rotationMat;
     transformation[5] = translate(mat4(), vec3(  4,  0.3f,  1)) * rotationMat;
@@ -1040,14 +1040,14 @@ void Tutorial14::createConstantBuffers()
         vec4(1.0f, 1.0f, 0.0f, 1.0f),
 
         // Instance 2
+        vec4(1.0f, 0.0f, 0.0f, 1.0f),
+        vec4(1.0f, 1.0f, 0.0f, 1.0f),
+        vec4(1.0f, 0.0f, 1.0f, 1.0f),
+        // 3 - 5 top triangles
+       // Instance 3
         vec4(0.0f, 0.0f, 1.0f, 1.0f),
         vec4(1.0f, 0.0f, 1.0f, 1.0f),
         vec4(0.0f, 1.0f, 1.0f, 1.0f),
-        // 3 - 5 top triangles
-       // Instance 3
-        vec4(0.0f, 1.0f, 0.0f, 1.0f),
-        vec4(0.0f, 1.0f, 1.0f, 1.0f),
-        vec4(1.0f, 1.0f, 0.0f, 1.0f),
 
         // Instance 4
         vec4(0.0f, 1.0f, 0.0f, 1.0f),
